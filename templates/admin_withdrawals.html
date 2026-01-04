@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Withdrawals</title>
+</head>
+<body>
+
+<h2>Withdrawal Requests</h2>
+
+{% for w in withdrawals %}
+    <div style="border:1px solid black; padding:10px; margin:10px;">
+        <p>User ID: {{ w.user_id }}</p>
+        <p>Amount: ₹{{ w.amount }}</p>
+        <p>Status: {{ w.status }}</p>
+
+        {% if w.status == "pending" %}
+            <a href="/admin/approve-withdrawal/{{ w.id }}">
+                <button>Approve</button>
+            </a>
+        {% endif %}
+    </div>
+{% endfor %}
+
+</body>
+</html>

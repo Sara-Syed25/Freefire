@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Available Lobbies</title>
+</head>
+<body>
+
+    <h2>Available Lobbies</h2>
+
+    {% if lobbies %}
+        {% for lobby in lobbies %}
+            <div style="border:1px solid #000; padding:10px; margin-bottom:10px;">
+                <h3>{{ lobby.name }}</h3>
+                <p>Match Type: {{ lobby.match_type }}</p>
+                <p>Entry Fee: ₹{{ lobby.entry_fee }}</p>
+                <p>Kill Reward: ₹{{ lobby.kill_reward }} per kill</p>
+                <p>Slots: {{ lobby.filled_slots }} / {{ lobby.total_slots }}</p>
+
+                <a href="/player/join-lobby/{{ lobby.id }}">
+    <button>Join Lobby</button>
+</a>
+
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>No lobbies available right now.</p>
+    {% endif %}
+
+</body>
+</html>
