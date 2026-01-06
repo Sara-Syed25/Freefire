@@ -1,34 +1,40 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Create Lobby</title>
-</head>
-<body>
-    <h2>Create New Lobby</h2>
+{% extends "base.html" %}
+{% block title %}Create Lobby{% endblock %}
 
-    <form method="POST" action="/admin/create-lobby">
+{% block content %}
 
-        <label>Lobby Name</label><br>
-        <input type="text" name="name" required><br><br>
+<div class="row justify-content-center">
+<div class="col-md-6">
 
-        <label>Match Type</label><br>
-        <select name="match_type" required>
+<div class="ff-card">
+    <h2>CREATE MATCH</h2>
+
+    <form method="POST" class="mt-4">
+
+        <input class="form-control ff-input mb-3" 
+               name="name" placeholder="Lobby Name" required>
+
+        <select class="form-control ff-input mb-3" name="match_type">
             <option value="solo">Solo</option>
             <option value="duo">Duo</option>
             <option value="squad">Squad</option>
-        </select><br><br>
+        </select>
 
-        <label>Entry Fee (₹)</label><br>
-        <input type="number" name="entry_fee" required><br><br>
+        <input class="form-control ff-input mb-3" 
+               type="number" name="entry_fee" placeholder="Entry Fee" required>
 
-        <label>Kill Reward (₹ per kill)</label><br>
-        <input type="number" name="kill_reward" required><br><br>
+        <input class="form-control ff-input mb-3" 
+               type="number" name="kill_reward" placeholder="Kill Reward" required>
 
-        <label>Total Slots</label><br>
-        <input type="number" name="total_slots" required><br><br>
+        <input class="form-control ff-input mb-4" 
+               type="number" name="total_slots" placeholder="Total Slots" required>
 
-        <button type="submit">Create Lobby</button>
+        <button class="ff-btn w-100">CREATE LOBBY</button>
 
     </form>
-</body>
-</html>
+</div>
+
+</div>
+</div>
+
+{% endblock %}

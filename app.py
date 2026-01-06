@@ -120,12 +120,25 @@ def player_dashboard():
 def admin_dashboard():
     if current_user.role != "admin":
         return "Access denied ❌"
-    return render_template("admin_dashboard.html")
-    # return f"""
-    # <h2>Admin Dashboard</h2>
-    # <p>Welcome Admin {current_user.username}</p>
-    # <p>Here you will manage lobbies & payments</p>
-    # """
+
+    users = User.query.all()
+    lobbies = Lobby.query.all()
+    withdrawals = WithdrawalRequest.query.filter_by(status="pending").all()
+    transactions = WalletTransaction.query.order_by(
+        WalletTransaction.timestamp.desc()
+    ).limit(10).all()
+
+    total_wallet = sum(u.wallet_balance for u in users)
+
+    return render_template(
+        "admin_dashboard.html",
+        users=users,
+        lobbies=lobbies,
+        withdrawals=withdrawals,
+        transactions=transactions,
+        total_wallet=total_wallet
+    )
+
 
 
 # Logout
@@ -369,6 +382,26 @@ def approve_withdrawal(wid):
 
     db.session.commit()
     return redirect("/admin/withdrawals")
+
+# admin dashboard for transactions
+@app.route("/admin/transactions")
+@login_required
+def admin_transactions():
+    if current_user.role != "admin":
+        return "Access denied ❌"
+
+    transactions = WalletTransaction.query.order_by(
+        WalletTransaction.timestamp.desc()
+    ).all()
+
+    users = {u.id: u.username for u in User.query.all()}
+
+    return render_template(
+        "admin_transactions.html",
+        transactions=transactions,
+        users=users
+    )
+
 
 if __name__ == "__main__":
     app.run(debug=True)

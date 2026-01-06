@@ -1,15 +1,145 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Admin Dashboard</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
 
-<h2>Admin Dashboard</h2>
+{% block content %}
 
-<a href="/admin/create-lobby"><button>Create Lobby</button></a><br><br>
-<a href="/admin/withdrawals"><button>Withdrawal Requests</button></a><br><br>
-<a href="/logout"><button>Logout</button></a>
+<h2 class="mb-4">ADMIN CONTROL CENTER</h2>
 
-</body>
-</html>
+<!-- ===================== -->
+<!-- PLATFORM STATS -->
+<!-- ===================== -->
+<div class="row mb-4">
+
+    <div class="col-md-3">
+        <div class="ff-card text-center">
+            <p class="text-muted">Users</p>
+            <h3>{{ users|length }}</h3>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="ff-card text-center">
+            <p class="text-muted">Total Wallet</p>
+            <h3>₹ {{ total_wallet }}</h3>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="ff-card text-center">
+            <p class="text-muted">Lobbies</p>
+            <h3>{{ lobbies|length }}</h3>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="ff-card text-center">
+            <p class="text-muted">Pending Withdrawals</p>
+            <h3>{{ withdrawals|length }}</h3>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===================== -->
+<!-- PENDING WITHDRAWALS -->
+<!-- ===================== -->
+<h4 class="mb-3">Pending Withdrawals</h4>
+
+{% if withdrawals %}
+<div class="row mb-5">
+{% for w in withdrawals %}
+    <div class="col-md-4">
+        <div class="ff-card">
+            <p>User ID: {{ w.user_id }}</p>
+            <p>Amount: ₹{{ w.amount }}</p>
+
+            <a href="/admin/approve-withdrawal/{{ w.id }}">
+                <button class="ff-btn w-100">Approve</button>
+            </a>
+        </div>
+    </div>
+{% endfor %}
+</div>
+{% else %}
+<p class="text-muted mb-5">No pending withdrawals.</p>
+{% endif %}
+
+<!-- ===================== -->
+<!-- RECENT TRANSACTIONS -->
+<!-- ===================== -->
+<h4 class="mb-3">Recent Transactions</h4>
+
+<div class="ff-card mb-5">
+<table class="table table-dark table-hover align-middle mb-0">
+    <thead>
+        <tr>
+            <th>User</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Description</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for tx in transactions %}
+        <tr>
+            <td>{{ tx.user_id }}</td>
+            <td>
+                {% if tx.transaction_type == "credit" %}
+                    <span class="text-success">CREDIT</span>
+                {% else %}
+                    <span class="text-danger">DEBIT</span>
+                {% endif %}
+            </td>
+            <td>₹{{ tx.amount }}</td>
+            <td>{{ tx.description }}</td>
+            <td>{{ tx.timestamp.strftime("%d %b %H:%M") }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>
+</div>
+
+<!-- ===================== -->
+<!-- USERS OVERVIEW -->
+<!-- ===================== -->
+<h4 class="mb-3">Users Overview</h4>
+
+<div class="row">
+{% for u in users %}
+    <div class="col-md-3">
+        <div class="ff-card text-center">
+            <p><b>{{ u.username }}</b></p>
+            <p class="text-muted">Wallet</p>
+            <h4>₹{{ u.wallet_balance }}</h4>
+        </div>
+    </div>
+{% endfor %}
+</div>
+
+<!-- ===================== -->
+<!-- PRIMARY ADMIN ACTIONS -->
+<!-- ===================== -->
+<div class="row mb-5">
+
+    <div class="col-md-4">
+        <div class="ff-card text-center">
+
+            <h4>Create Lobby</h4>
+            <p class="text-muted">
+                Set up new matches and entry fees
+            </p>
+
+            <a href="/admin/create-lobby">
+                <button class="ff-btn w-100 mt-3">
+                    + CREATE NEW LOBBY
+                </button>
+            </a>
+
+        </div>
+    </div>
+
+</div>
+
+
+{% endblock %}

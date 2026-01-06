@@ -1,43 +1,28 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Player Dashboard</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Player Dashboard{% endblock %}
 
-<h2>Player Dashboard</h2>
+{% block content %}
 
-<p><b>Wallet Balance:</b> ₹{{ balance }}</p>
+<div class="ff-card text-center">
+    <h2>PLAYER WALLET</h2>
+    <p class="wallet-glow">₹ {{ balance }}</p>
 
-<hr>
+    <div class="mt-4 d-flex justify-content-center gap-3 flex-wrap">
+        <a href="/player/add-money/100"><button class="ff-btn">+ ₹100</button></a>
+        <a href="/player/add-money/500"><button class="ff-btn">+ ₹500</button></a>
+        <a href="/player/request-withdrawal"><button class="ff-btn-outline">Withdraw</button></a>
+    </div>
+</div>
 
-<h3>Wallet Actions</h3>
+<div class="ff-card text-center">
+    <h2>GAME ACTIONS</h2>
 
-<a href="/player/add-money/100">
-    <button>Add ₹100</button>
-</a>
+    <div class="mt-3">
+        <a href="/player/lobbies">
+            <button class="ff-btn">JOIN LOBBIES</button>
+        </a>
+    </div>
+</div>
 
-<a href="/player/add-money/500">
-    <button>Add ₹500</button>
-</a>
+{% endblock %}
 
-<br><br>
-
-<a href="/player/request-withdrawal">
-    <button>Withdraw Money</button>
-</a>
-
-<hr>
-
-<h3>Game Actions</h3>
-
-<a href="/player/lobbies">
-    <button>View Lobbies</button>
-</a>
-
-<a href="/logout">
-    <button>Logout</button>
-</a>
-
-</body>
-</html>

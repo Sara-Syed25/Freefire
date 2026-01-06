@@ -1,25 +1,36 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Withdrawals</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Withdrawals{% endblock %}
 
-<h2>Withdrawal Requests</h2>
+{% block content %}
 
+<h2 class="mb-4">WITHDRAWAL REQUESTS</h2>
+
+<div class="row">
 {% for w in withdrawals %}
-    <div style="border:1px solid black; padding:10px; margin:10px;">
-        <p>User ID: {{ w.user_id }}</p>
-        <p>Amount: ₹{{ w.amount }}</p>
-        <p>Status: {{ w.status }}</p>
+    <div class="col-md-4">
+        <div class="ff-card text-center">
 
-        {% if w.status == "pending" %}
-            <a href="/admin/approve-withdrawal/{{ w.id }}">
-                <button>Approve</button>
-            </a>
-        {% endif %}
+            <h5>PLAYER ID</h5>
+            <p class="wallet-glow">{{ w.user_id }}</p>
+
+            <p>Amount: <b>₹{{ w.amount }}</b></p>
+            <p>Status: <span class="text-warning">{{ w.status }}</span></p>
+
+            {% if w.status == "pending" %}
+                <a href="/admin/approve-withdrawal/{{ w.id }}">
+                    <button class="ff-btn w-100 mt-2">
+                        APPROVE PAYOUT
+                    </button>
+                </a>
+            {% else %}
+                <button class="ff-btn-outline w-100 mt-2" disabled>
+                    {{ w.status | upper }}
+                </button>
+            {% endif %}
+
+        </div>
     </div>
 {% endfor %}
+</div>
 
-</body>
-</html>
+{% endblock %}

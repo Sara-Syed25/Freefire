@@ -1,21 +1,41 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Withdraw</title>
-</head>
-<body>
+{% extends "base.html" %}
+{% block title %}Withdraw{% endblock %}
 
-<h2>Withdraw Money</h2>
+{% block content %}
 
-<form method="POST">
-    <label>Amount</label><br>
-    <input type="number" name="amount" required><br><br>
+<div class="row justify-content-center">
+<div class="col-md-5">
 
-    <button type="submit">Request Withdrawal</button>
-</form>
+<div class="ff-card text-center">
 
-<br>
-<a href="/player/dashboard">Back</a>
+    <h2>WITHDRAW FUNDS</h2>
+    <p class="text-muted mb-4">
+        Enter amount to withdraw from wallet
+    </p>
 
-</body>
-</html>
+    <form method="POST">
+
+        <input
+            type="number"
+            name="amount"
+            placeholder="Amount"
+            class="form-control ff-input mb-4"
+            required
+        >
+
+        <button class="ff-btn w-100">
+            REQUEST WITHDRAWAL
+        </button>
+
+    </form>
+
+    <a href="/player/dashboard" class="ff-btn-outline d-block mt-4">
+        BACK TO DASHBOARD
+    </a>
+
+</div>
+
+</div>
+</div>
+
+{% endblock %}
