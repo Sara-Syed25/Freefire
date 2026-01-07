@@ -16,10 +16,16 @@ from models.lobby import Lobby
 from models.lobby_participant import LobbyParticipant
 from models.wallet_transaction import WalletTransaction
 from models.withdrawal_request import WithdrawalRequest
-
+from flask_jwt_extended import JWTManager
+import random
+def generate_otp():
+    return str(random.randint(100000, 999999))
 
 app = Flask(__name__)
-app.config.from_object(Config)
+app.config["JWT_SECRET_KEY"] = "super-secret-key-change-this"
+jwt = JWTManager(app)
+
+# app.config.from_object(Config)
 
 db.init_app(app)
 login_manager.init_app(app)
@@ -36,28 +42,28 @@ def load_user(user_id):
 def home():
     return "Free Fire Esports Platform Running 🚀"
 
-@app.route("/register", methods=["GET", "POST"])
-def register():
-    if request.method == "POST":
-        username = request.form["username"]
-        email = request.form["email"]
-        raw_password = request.form["password"]
-        hashed_password = generate_password_hash(raw_password)
+# @app.route("/register", methods=["GET", "POST"])
+# def register():
+#     if request.method == "POST":
+#         username = request.form["username"]
+#         email = request.form["email"]
+#         raw_password = request.form["password"]
+#         hashed_password = generate_password_hash(raw_password)
 
 
-        new_user = User(
-            username=username,
-            email=email,
-            password=hashed_password,
-            role="player"
-        )
+#         new_user = User(
+#             username=username,
+#             email=email,
+#             password=hashed_password,
+#             role="player"
+#         )
 
-        db.session.add(new_user)
-        db.session.commit()
+#         db.session.add(new_user)
+#         db.session.commit()
 
-        return "User registered successfully ✅"
+#         return "User registered successfully ✅"
 
-    return render_template("register.html")
+#     return render_template("register.html")
 
 # login
 def load_user(user_id):
@@ -402,6 +408,295 @@ def admin_transactions():
         users=users
     )
 
+from extensions import mail
+from config import MAIL_SERVER, MAIL_PORT, MAIL_USE_TLS, MAIL_USERNAME, MAIL_PASSWORD
+
+app.config.update(
+    MAIL_SERVER=MAIL_SERVER,
+    MAIL_PORT=MAIL_PORT,
+    MAIL_USE_TLS=MAIL_USE_TLS,
+    MAIL_USERNAME=MAIL_USERNAME,
+    MAIL_PASSWORD=MAIL_PASSWORD,
+)
+
+mail.init_app(app)
+
+from flask_mail import Message
+from extensions import mail
+
+def send_email(to, subject, body):
+    msg = Message(
+        subject=subject,
+        recipients=[to],
+        body=body,
+        sender=("Free Fire Esports", "syedasara2506@gmail.com")
+    )
+    mail.send(msg)
+
+# @app.route("/test-email")
+# def test_email():
+#     send_email(
+#         # to="23f2001706@ds.study.iitm.ac.in",
+#         to=user.email,
+#         subject="SMTP Working",
+#         body="Your Free Fire Esports platform email system works."
+#     )
+#     return "Email sent"
+
+# if __name__ == "__main__":
+#     app.run(debug=True)
+from flask_jwt_extended import create_access_token
+
+# @app.route("/register", methods=["GET", "POST"])
+# def register():
+#     if request.method == "POST":
+#         username = request.form["username"]
+#         email = request.form["email"]
+#         password = request.form["password"]
+
+#         hashed_password = generate_password_hash(password)
+
+#         user = User(
+#             username=username,
+#             email=email,
+#             password=hashed_password
+#         )
+
+#         db.session.add(user)
+#         db.session.commit()
+
+#         # 🔐 Generate JWT token for THIS user
+#         token = create_access_token(identity=user.id)
+
+#         # 🔗 Verification link
+#         verify_link = f"http://127.0.0.1:5000/verify-email/{token}"
+
+#         # ✉️ SEND EMAIL TO THE REGISTERED USER
+#         send_email(
+#             to=user.email,   # 👈 AUTOMATIC
+#             subject="Verify your Free Fire account",
+#             body=f"""
+# Welcome to Free Fire Esports!
+
+# Click the link below to verify your account:
+# {verify_link}
+
+# If you did not register, ignore this email.
+# """
+#         )
+
+#         return "Registration successful! Check your email to verify."
+
+#     return render_template("register.html")
+
+
+
+@app.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        username = request.form["username"]
+        email = request.form["email"]
+        password = request.form["password"]
+
+        # Check email uniqueness
+        if User.query.filter_by(email=email).first():
+            return "Email already registered."
+
+        hashed_password = generate_password_hash(password)
+
+        otp = generate_otp()
+
+        user = User(
+            username=username,
+            email=email,
+            password=hashed_password,
+            role="player",
+            wallet_balance=0.0,
+            otp_code=otp,
+            # otp_expires_at=datetime.utcnow() + timedelta(minutes=5),
+            is_verified=False
+        )
+
+        db.session.add(user)
+        db.session.commit()
+
+        # Send OTP email
+        send_email(
+            to=user.email,
+            subject="Your Free Fire OTP Verification Code",
+            body=f"""
+Welcome to Free Fire Esports!
+
+Your OTP code is: {otp}
+
+This OTP is valid for 5 minutes.
+Do not share it with anyone.
+"""
+        )
+
+        return redirect(url_for("verify_otp", user_id=user.id))
+
+    return render_template("register.html")
+
+# verification
+from flask_jwt_extended import decode_token
+
+@app.route("/verify-email/<token>")
+def verify_email(token):
+    data = decode_token(token)
+    user_id = data["sub"]
+
+    user = User.query.get(user_id)
+    user.is_verified = True
+
+    db.session.commit()
+
+    return "Email verified successfully. You can now log in."
+
+
+
+# otp
+from datetime import datetime
+
+@app.route("/verify-otp/<int:user_id>", methods=["GET", "POST"])
+def verify_otp(user_id):
+    user = User.query.get_or_404(user_id)
+
+    if request.method == "POST":
+        otp = request.form["otp"]
+
+        if user.is_verified:
+            return "Account already verified."
+
+        if user.otp_code != otp:
+            return "Invalid OTP."
+
+        # if datetime.utcnow() > user.otp_expires_at:
+            # return "OTP expired. Please register again."
+
+        # Success
+        user.is_verified = True
+        user.otp_code = None
+        user.otp_expires_at = None
+
+        db.session.commit()
+
+        return "Account verified successfully. You can now login."
+
+    return render_template("verify_otp.html")
+
 
 if __name__ == "__main__":
     app.run(debug=True)
+# from flask import render_template, request, redirect, url_for, flash
+# from extensions import db, login_manager
+# # removed duplicate/unused imports: from models import user, from models import lobby
+# from models.user import User
+# from werkzeug.security import generate_password_hash
+# from flask_login import login_user, logout_user, login_required, current_user
+# from werkzeug.security import check_password_hash
+# from models.lobby import Lobby
+# from models.lobby_participant import LobbyParticipant
+# from models.wallet_transaction import WalletTransaction
+# from models.withdrawal_request import WithdrawalRequest
+# from flask_jwt_extended import create_access_token
+# # ...existing code...
+# @login_manager.user_loader
+# def load_user(user_id):
+#     try:
+#         return User.query.get(int(user_id))
+#     except Exception:
+#         return None
+# # ...existing code...
+# @app.route("/register", methods=["GET", "POST"])
+# def register():
+#     if request.method == "POST":
+#         username = request.form["username"]
+#         email = request.form["email"]
+#         raw_password = request.form["password"]
+#         hashed_password = generate_password_hash(raw_password)
+
+#         new_user = User(
+#             username=username,
+#             email=email,
+#             password=hashed_password,
+#             role="player"
+#         )
+
+#         try:
+#             db.session.add(new_user)
+#             db.session.commit()
+#         except Exception as e:
+#             db.session.rollback()
+#             flash(f"Error registering user: {e}")
+#             return redirect(url_for("register"))
+
+#         # Generate JWT token and send verification email (non-blocking/simple)
+#         try:
+#             token = create_access_token(identity=new_user.id)
+#             verify_link = f"http://127.0.0.1:5000/verify-email/{token}"
+#             # send_email is defined below after mail.init_app
+#             send_email(
+#                 to=new_user.email,
+#                 subject="Verify your Free Fire account",
+#                 body=f"Welcome! Click to verify: {verify_link}"
+#             )
+#         except Exception:
+#             # don't block registration on email errors
+#             pass
+
+#         return "Registration successful! Check your email to verify."
+
+#     return render_template("register.html")
+# # ...existing code...
+# from extensions import mail
+# from config import MAIL_SERVER, MAIL_PORT, MAIL_USE_TLS, MAIL_USERNAME, MAIL_PASSWORD
+
+# app.config.update(
+#     MAIL_SERVER=MAIL_SERVER,
+#     MAIL_PORT=MAIL_PORT,
+#     MAIL_USE_TLS=MAIL_USE_TLS,
+#     MAIL_USERNAME=MAIL_USERNAME,
+#     MAIL_PASSWORD=MAIL_PASSWORD,
+# )
+
+# mail.init_app(app)
+
+# from flask_mail import Message
+
+# def send_email(to, subject, body):
+#     try:
+#         msg = Message(
+#             subject=subject,
+#             recipients=[to],
+#             body=body,
+#             sender=("Free Fire Esports", MAIL_USERNAME or "no-reply@example.com")
+#         )
+#         mail.send(msg)
+#     except Exception:
+#         # fail silently for now
+#         pass
+# # ...existing code...
+# # removed duplicate
+
+# # # test
+# # from flask_mail import Message
+# # from extensions import mail
+
+# # def send_email(to, subject, body):
+# #     msg = Message(
+# #         subject=subject,
+# #         recipients=[to],
+# #         body=body,
+# #         sender=("Free Fire Esports", "syedasara2506@gmail.com")
+# #     )
+# #     mail.send(msg)
+# # # test
+# # @app.route("/test-email")
+# # def test_email():
+# #     send_email(
+# #         to="yourgmail@gmail.com",
+# #         subject="SMTP Working",
+# #         body="Your Free Fire Esports platform email system works."
+# #     )
+# #     return "Email sent"
