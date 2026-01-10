@@ -1,11 +1,11 @@
-from flask import Flask
+from flask import Flask, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-from config import Config
+# from config import Config
 from flask import render_template, request, redirect, url_for, flash
 # from models.user import User
 # from app import db
-from extensions import db, login_manager
+from extensions import db, login_manager, mail
 from models import user
 from models import lobby
 from models.user import User
@@ -16,20 +16,33 @@ from models.lobby import Lobby
 from models.lobby_participant import LobbyParticipant
 from models.wallet_transaction import WalletTransaction
 from models.withdrawal_request import WithdrawalRequest
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, get_jwt, jwt_required
 import random
+import config
 def generate_otp():
     return str(random.randint(100000, 999999))
 
 app = Flask(__name__)
-app.config["JWT_SECRET_KEY"] = "super-secret-key-change-this"
+app.config["JWT_SECRET_KEY"] = config.JWT_SECRET_KEY
 jwt = JWTManager(app)
+app.config["SECRET_KEY"] = config.SECRET_KEY
+app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = config.SQLALCHEMY_TRACK_MODIFICATIONS
+app.config["JWT_SECRET_KEY"] = config.JWT_SECRET_KEY
+
+app.config["MAIL_SERVER"] = config.MAIL_SERVER
+app.config["MAIL_PORT"] = config.MAIL_PORT
+app.config["MAIL_USE_TLS"] = config.MAIL_USE_TLS
+app.config["MAIL_USERNAME"] = config.MAIL_USERNAME
+app.config["MAIL_PASSWORD"] = config.MAIL_PASSWORD
 
 # app.config.from_object(Config)
 
 db.init_app(app)
+mail.init_app(app)
 login_manager.init_app(app)
-login_manager.login_view = "login"
+# login_manager.login_view = "login"
+jwt = JWTManager(app)
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -66,30 +79,110 @@ def home():
 #     return render_template("register.html")
 
 # login
-def load_user(user_id):
-        return User.query.get(int(user_id))
+from flask_jwt_extended import create_access_token
+from flask_login import login_user
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
-        email = request.form["email"]
+        email = request.form["email"].lower()
         password = request.form["password"]
 
         user = User.query.filter_by(email=email).first()
 
-        if user and check_password_hash(user.password, password):
-            # login_user(user)
-            # return redirect("/dashboard")
-            login_user(user)
+        if not user:
+            return "Incorrect email ❌"
 
-            if user.role == "admin":
-                return redirect("/admin/dashboard")
-            else:
-                return redirect("/player/dashboard")
+        if not user.is_verified:
+            return "Please verify your account with OTP first"
 
+        if not check_password_hash(user.password, password):
+            return "Incorrect password ❌"
 
-        return "Invalid email or password ❌"
+        # ✅ LOGIN SESSION (FOR WEBSITE)
+        login_user(user)
+
+        # ✅ CREATE JWT (FOR API)
+        access_token = create_access_token(
+            identity=user.id,
+            additional_claims={"role": user.role}
+        )
+
+        # Optional: store JWT in session
+        session["jwt"] = access_token
+
+        # ✅ REDIRECT BASED ON ROLE
+        if user.role == "admin":
+            return redirect("/admin/dashboard")
+        else:
+            return redirect("/player/dashboard")
 
     return render_template("login.html")
+
+# def load_user(user_id):
+#         return User.query.get(int(user_id))
+# @app.route("/login", methods=["GET", "POST"])
+# def login():
+#     if request.method == "POST":
+#         email = request.form["email"]
+#         password = request.form["password"]
+
+#         user = User.query.filter_by(email=email).first()
+
+#         if user and check_password_hash(user.password, password):
+#             from flask_jwt_extended import create_access_token
+
+#             access_token = create_access_token(
+#                 identity=user.id,
+#                 additional_claims={
+#                     "role": user.role
+#                 }
+#             )
+
+#             session["jwt"] = access_token
+#             return {
+#     "message": "Login successful",
+#     "jwt_token": access_token
+# }
+
+#             # login_user(user)
+#             # return redirect("/dashboard")
+#             login_user(user)
+
+#             if user.role == "admin":
+#                 return redirect("/admin/dashboard")
+#             else:
+#                 return redirect("/player/dashboard")
+
+
+#         return "Invalid email or password ❌"
+
+#     return render_template("login.html")
+
+# jwt token
+# from flask_jwt_extended import create_access_token
+
+# access_token = create_access_token(
+#     identity=user.id,
+#     additional_claims={
+#         "role": user.role
+#     }
+# )
+    # session["jwt"] = access_token
+    #     return redirect(url_for("player_dashboard"))
+# Removed misplaced return statement outside of a function
+@app.route("/api/admin/stats")
+@jwt_required()
+def admin_stats():
+    claims = get_jwt()
+
+    if claims["role"] != "admin":
+        return {"error": "Admins only"}, 403
+
+    return {
+        "total_users": User.query.count(),
+        "total_lobbies": Lobby.query.count()
+    }
 
 
 
@@ -499,8 +592,11 @@ def register():
         password = request.form["password"]
 
         # Check email uniqueness
-        if User.query.filter_by(email=email).first():
-            return "Email already registered."
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            return "Email already registered. Please login."
+        # if User.query.filter_by(email=email).first():
+        #     return "Email already registered."
 
         hashed_password = generate_password_hash(password)
 
@@ -561,6 +657,9 @@ from datetime import datetime
 @app.route("/verify-otp/<int:user_id>", methods=["GET", "POST"])
 def verify_otp(user_id):
     user = User.query.get_or_404(user_id)
+    if request.method == "GET":
+        return render_template("verify_otp.html", user=user)
+
 
     if request.method == "POST":
         otp = request.form["otp"]
